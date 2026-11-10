@@ -93,62 +93,320 @@ const App = (function () {
   }
   A.isLeaderRole = function (r) { return LEADERS.indexOf(r) >= 0; };
 
-  // ---------- tampilan: login ----------
+  // ---------- tampilan: login & bantuan ----------
+  const ROLE_HINTS = {
+    all: {
+      hint: 'Gunakan akun resmi (NISN, NIP, atau Username) yang diberikan oleh pihak sekolah.',
+      placeholder: 'NISN / NIP / Username Akun'
+    },
+    siswa: {
+      hint: '<b>Akun Siswa:</b> Masuk dengan <b>NIS</b> atau <b>NISN</b>. Password awal dibagikan oleh Wali Kelas Anda.',
+      placeholder: 'Masukkan NIS atau NISN Siswa'
+    },
+    guru: {
+      hint: '<b>Akun Guru & Tendik:</b> Masuk dengan <b>NIP</b> atau <b>Username</b> dari kurikulum/admin.',
+      placeholder: 'Masukkan NIP atau Username Guru'
+    },
+    admin: {
+      hint: '<b>Admin & Pimpinan:</b> Akses khusus Administrator, Kepala Sekolah, dan Waka Kurikulum.',
+      placeholder: 'Masukkan Username Admin'
+    }
+  };
+
+  function openLoginHelp() {
+    U.modal({
+      title: 'Panduan Akun & Bantuan Login SIAKAD',
+      body:
+        '<div class="grid" style="gap:10px">' +
+          '<div class="guide-card">' +
+            '<div class="guide-card-icon" style="background:#EFF6FF;color:#2563EB">' + icon('user') + '</div>' +
+            '<div><div style="font-size:13.5px;font-weight:700;color:#0F172A">Akun Siswa</div>' +
+            '<div style="font-size:12px;line-height:17px;color:#475569;margin-top:2px">' +
+              'Username adalah <b>NIS</b> atau <b>NISN</b>. Bila lupa password atau belum menerima akun, silakan hubungi <b>Wali Kelas</b> Anda untuk reset.' +
+            '</div></div>' +
+          '</div>' +
+          '<div class="guide-card">' +
+            '<div class="guide-card-icon" style="background:#FFF7ED;color:#EA580C">' + icon('edit') + '</div>' +
+            '<div><div style="font-size:13.5px;font-weight:700;color:#0F172A">Akun Guru & Tenaga Kependidikan</div>' +
+            '<div style="font-size:12px;line-height:17px;color:#475569;margin-top:2px">' +
+              'Username berupa <b>NIP</b> atau <b>Username</b> khusus yang didaftarkan. Untuk kendala akun, silakan hubungi <b>Waka Kurikulum</b> atau Administrator.' +
+            '</div></div>' +
+          '</div>' +
+          '<div class="guide-card">' +
+            '<div class="guide-card-icon" style="background:#F0FDF4;color:#16A34A">' + icon('shield') + '</div>' +
+            '<div><div style="font-size:13.5px;font-weight:700;color:#0F172A">Akun Administrator & Pimpinan</div>' +
+            '<div style="font-size:12px;line-height:17px;color:#475569;margin-top:2px">' +
+              'Username bawaan: <code>admin</code>. Bila password admin lupa, buka editor Apps Script dan jalankan fungsi <code>resetAdminPassword</code>.' +
+            '</div></div>' +
+          '</div>' +
+          '<div class="info-box" style="font-size:12px;line-height:18px">' +
+            '<b>Catatan Keamanan:</b> Akun dengan password bawaan sekolah wajib membuat password baru saat login pertama demi menjaga kerahasiaan data nilai dan rapor.' +
+          '</div>' +
+        '</div>',
+      foot: '<button class="btn primary block" data-x>Saya Mengerti</button>'
+    });
+  }
+
   function viewLogin(msg) {
-    const name = window.SIAKAD_CONFIG.APP_NAME;
+    const name = window.SIAKAD_CONFIG.APP_NAME || 'SIAKAD SMK';
+    const rememberedUser = (function () { try { return localStorage.getItem('siakad.remember_user') || ''; } catch (e) { return ''; } })();
+
+    const featCards =
+      '<div class="feat-card">' +
+        '<div class="feat-icon">' + icon('edit') + '</div>' +
+        '<div><div class="feat-title">E-Rapor & Penilaian</div><div class="feat-desc">Hitung otomatis formatif, sumatif, bobot akhir & cetak rapor instan.</div></div>' +
+      '</div>' +
+      '<div class="feat-card">' +
+        '<div class="feat-icon">' + icon('usercheck') + '</div>' +
+        '<div><div class="feat-title">Presensi Kelas Per JP</div><div class="feat-desc">Presensi cepat hitungan detik dengan rekap kehadiran otomatis.</div></div>' +
+      '</div>' +
+      '<div class="feat-card">' +
+        '<div class="feat-icon">' + icon('book') + '</div>' +
+        '<div><div class="feat-title">Jadwal & Jurnal Guru</div><div class="feat-desc">Monitoring ketercapaian materi terintegrasi kalender akademik.</div></div>' +
+      '</div>' +
+      '<div class="feat-card">' +
+        '<div class="feat-icon">' + icon('cloud') + '</div>' +
+        '<div><div class="feat-title">Database Cloud Aman</div><div class="feat-desc">Tersimpan aman di Google Cloud Sheets sekolah tanpa server lokal.</div></div>' +
+      '</div>';
+
     $('#app').innerHTML =
-      '<div class="login-wrap"><div class="login-hero"><div class="row" style="gap:12px;position:relative;z-index:1"><div class="logo-mark">' + icon('cap') + '</div><b style="font-size:18px">' + esc(name) + '</b></div>' +
-      '<div style="position:relative;z-index:1"><h1>Administrasi akademik, lebih ringkas.</h1><ul>' +
-      '<li>' + icon('edit') + '<span>Input nilai langsung di tabel — nilai akhir terhitung otomatis.</span></li>' +
-      '<li>' + icon('usercheck') + '<span>Presensi satu kelas dalam hitungan detik.</span></li>' +
-      '<li>' + icon('book') + '<span>Jurnal mengajar dan kalender akademik dalam satu tempat.</span></li></ul></div>' +
-      '<span class="small" style="color:#9A3412;position:relative;z-index:1">Data tersimpan aman di Google Sheets sekolah.</span></div>' +
-      '<div class="login-form"><form class="login-card" id="fLogin" autocomplete="on" novalidate><h2>Masuk</h2><p class="sub">Gunakan akun yang diberikan oleh admin sekolah.</p>' +
-      (msg ? '<div class="err-box" role="alert">' + esc(msg) + '</div>' : '') +
-      '<div id="loginErr"></div>' +
-      '<div class="field"><label for="lu">Username</label><input class="input" id="lu" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>' +
-      '<div class="field"><label for="lp">Password</label><div class="pw"><input class="input" id="lp" name="password" type="password" autocomplete="current-password" required>' +
-      '<button type="button" class="eye" id="eye" aria-label="Tampilkan password">' + icon('eye') + '</button></div></div>' +
-      '<button class="btn primary block" id="bLogin" type="submit">Masuk</button>' +
-      '<p class="small muted center" style="margin-top:16px">Lupa password? Hubungi admin sekolah untuk mengatur ulang.</p></form></div></div>';
-    $('#eye').onclick = function () { const p = $('#lp'); p.type = p.type === 'password' ? 'text' : 'password'; };
+      '<div class="login-wrap">' +
+        '<!-- Hero / Showcase Kiri -->' +
+        '<div class="login-hero">' +
+          '<div class="login-orb orb-1"></div>' +
+          '<div class="login-orb orb-2"></div>' +
+          '<div class="hero-top">' +
+            '<div class="hero-brand">' +
+              '<div class="hero-brand-logo">' + icon('cap') + '</div>' +
+              '<div class="hero-brand-text"><b>' + esc(name) + '</b><span>Portal Akademik Digital</span></div>' +
+            '</div>' +
+            '<div class="status-pill"><span class="status-dot"></span><span>Sistem Cloud Aktif</span></div>' +
+          '</div>' +
+          '<div class="hero-body">' +
+            '<div class="hero-tag">' + icon('sparkle') + '<span>PLATFORM AKADEMIK TERPADU</span></div>' +
+            '<h1>Administrasi Akademik SMK, Lebih Cerdas & Terstruktur.</h1>' +
+            '<p>Kelola penilaian Kurikulum Merdeka, presensi siswa per jam pelajaran, jadwal otomatis, dan jurnal mengajar guru dalam satu platform yang ringan dan responsif.</p>' +
+            '<div class="hero-features">' + featCards + '</div>' +
+          '</div>' +
+          '<div class="hero-foot">' +
+            '<div class="hero-pills">' +
+              '<span class="hero-pill">⚡ Super Cepat & Ringan</span>' +
+              '<span class="hero-pill">📱 Multi-Device (HP & PC)</span>' +
+              '<span class="hero-pill">🔒 Akses Berbasis Peran</span>' +
+            '</div>' +
+            '<div class="hero-note">' + icon('cloud') + '<span>Data tersimpan aman & tersinkronisasi langsung dengan Google Cloud sekolah.</span></div>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Form Login Kanan -->' +
+        '<div class="login-form">' +
+          '<!-- Brand Header Mobile -->' +
+          '<div class="mobile-brand">' +
+            '<div class="hero-brand-logo">' + icon('cap') + '</div>' +
+            '<h2>' + esc(name) + '</h2>' +
+            '<p>Portal Sistem Informasi Akademik SMK</p>' +
+          '</div>' +
+
+          '<form class="login-card" id="fLogin" autocomplete="on" novalidate>' +
+            '<div class="card-header-badge">' + icon('lock') + '<span>Portal Masuk</span></div>' +
+            '<h2>Masuk ke Akun</h2>' +
+            '<p class="sub">Silakan pilih peran Anda atau masukkan kredensial akun akademik.</p>' +
+
+            '<!-- Selector Peran Akun -->' +
+            '<div class="role-pill-tabs" role="tablist" aria-label="Pilih jenis akun">' +
+              '<button type="button" class="role-pill active" data-role="all">Semua</button>' +
+              '<button type="button" class="role-pill" data-role="siswa">Siswa</button>' +
+              '<button type="button" class="role-pill" data-role="guru">Guru</button>' +
+              '<button type="button" class="role-pill" data-role="admin">Admin</button>' +
+            '</div>' +
+            '<div class="role-hint" id="roleHintBox">' + icon('info') + '<span id="roleHintText">' + ROLE_HINTS.all.hint + '</span></div>' +
+
+            (msg ? '<div class="err-box" role="alert">' + esc(msg) + '</div>' : '') +
+            '<div id="loginErr"></div>' +
+
+            '<div class="field">' +
+              '<label for="lu">Username / NISN / NIP</label>' +
+              '<div class="input-with-icon">' +
+                '<span class="input-icon">' + icon('user') + '</span>' +
+                '<input class="input" id="lu" name="username" value="' + esc(rememberedUser) + '" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="' + esc(ROLE_HINTS.all.placeholder) + '" required>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="lp">Password</label>' +
+              '<div class="input-with-icon pw">' +
+                '<span class="input-icon">' + icon('lock') + '</span>' +
+                '<input class="input" id="lp" name="password" type="password" autocomplete="current-password" placeholder="Masukkan password Anda" required>' +
+                '<button type="button" class="eye" id="eye" aria-label="Tampilkan password">' + icon('eye') + '</button>' +
+              '</div>' +
+            '</div>' +
+
+            '<div class="login-opts">' +
+              '<label class="remember-me"><input type="checkbox" id="remUser"' + (rememberedUser ? ' checked' : '') + '><span>Ingat Saya</span></label>' +
+              '<button type="button" class="forgot-btn" id="bForgot">Lupa password?</button>' +
+            '</div>' +
+
+            '<button class="login-submit-btn" id="bLogin" type="submit">' +
+              '<span>Masuk ke Sistem</span>' + icon('arrowRight') +
+            '</button>' +
+
+            '<button type="button" class="login-help-btn" id="bHelpGuide">' +
+              icon('help') + '<span>Panduan Format Akun & Bantuan Login</span>' +
+            '</button>' +
+
+            '<div class="login-footer-sec">' +
+              '<span class="security-note">' + icon('shield') + 'Akses dilindungi standar keamanan sekolah</span>' +
+            '</div>' +
+          '</form>' +
+
+          '<!-- Fitur Kolapsibel Khusus Mobile -->' +
+          '<div class="mobile-features-sec">' +
+            '<button type="button" class="mobile-feat-toggle" id="bToggleFeat">' +
+              '<span class="row" style="gap:8px">' + icon('sparkle') + '<span>Keunggulan Layanan SIAKAD</span></span>' +
+              icon('chev', 'chev') +
+            '</button>' +
+            '<div class="mobile-feat-content" id="mobileFeatBox">' + featCards + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    // Event Listeners
+    $('#eye').onclick = function () {
+      const p = $('#lp');
+      p.type = p.type === 'password' ? 'text' : 'password';
+    };
+
+    $$('.role-pill').forEach(function (btn) {
+      btn.onclick = function () {
+        $$('.role-pill').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        const role = btn.dataset.role || 'all';
+        const info = ROLE_HINTS[role] || ROLE_HINTS.all;
+        $('#roleHintText').innerHTML = info.hint;
+        const inp = $('#lu');
+        inp.placeholder = info.placeholder;
+        inp.focus();
+      };
+    });
+
+    $('#bForgot').onclick = openLoginHelp;
+    $('#bHelpGuide').onclick = openLoginHelp;
+
+    const bToggle = $('#bToggleFeat');
+    if (bToggle) {
+      bToggle.onclick = function () {
+        bToggle.classList.toggle('open');
+        $('#mobileFeatBox').classList.toggle('show');
+      };
+    }
+
     $('#fLogin').onsubmit = async function (e) {
       e.preventDefault();
       const u = $('#lu').value.trim(), p = $('#lp').value, b = $('#bLogin'), box = $('#loginErr');
       box.innerHTML = '';
-      if (!u || !p) { box.innerHTML = '<div class="err-box" role="alert">Username dan password wajib diisi.</div>'; return; }
-      b.disabled = true; b.innerHTML = '<div class="spin sm" style="border-top-color:#fff;border-color:rgba(255,255,255,.4)"></div> Memeriksa…';
+      if (!u || !p) {
+        box.innerHTML = '<div class="err-box" role="alert">Username dan password wajib diisi.</div>';
+        return;
+      }
+
+      // Simpan preferensi "Ingat Saya"
+      const rem = $('#remUser');
+      try {
+        if (rem && rem.checked) {
+          localStorage.setItem('siakad.remember_user', u);
+        } else {
+          localStorage.removeItem('siakad.remember_user');
+        }
+      } catch (err) {}
+
+      b.disabled = true;
+      b.innerHTML = '<div class="spin sm" style="border-top-color:#fff;border-color:rgba(255,255,255,.4)"></div> Memverifikasi kredensial…';
       try {
         const r = await API.call('login', { username: u, password: p });
         API.setToken(r.token);
-        if (r.must_change) { A.s = { user: r.user }; viewForceChange(r.user); return; }
-        A.s = r.boot; reindex(); save(); enter();
+        if (r.must_change) {
+          A.s = { user: r.user };
+          viewForceChange(r.user);
+          return;
+        }
+        A.s = r.boot;
+        reindex();
+        save();
+        enter();
       } catch (err) {
         box.innerHTML = '<div class="err-box" role="alert">' + esc(err.message) + '</div>';
-        b.disabled = false; b.textContent = 'Masuk'; $('#lp').select();
+        b.disabled = false;
+        b.innerHTML = '<span>Masuk ke Sistem</span>' + icon('arrowRight');
+        $('#lp').select();
       }
     };
-    hideSplash(); setTimeout(function () { const f = $('#lu'); if (f) f.focus(); }, 50);
+
+    hideSplash();
+    setTimeout(function () {
+      const f = $('#lu');
+      if (f) {
+        if (f.value) {
+          const p = $('#lp');
+          if (p) p.focus();
+        } else {
+          f.focus();
+        }
+      }
+    }, 50);
   }
 
   function viewForceChange(user) {
     $('#app').innerHTML =
-      '<div class="login-wrap" style="grid-template-columns:1fr"><div class="login-form"><form class="login-card" id="fPw"><div class="logo-mark" style="margin-bottom:16px">' + icon('key') + '</div>' +
-      '<h2>Buat password baru</h2><p class="sub">Halo, ' + esc(user.nama) + '. Demi keamanan, ganti password awal Anda sebelum melanjutkan.</p><div id="pwErr"></div>' + pwFields(false) +
-      '<button class="btn primary block" id="bPw" type="submit">Simpan & lanjutkan</button><button class="btn ghost block" type="button" id="bOut" style="margin-top:8px">Keluar</button></form></div></div>';
+      '<div class="login-wrap" style="grid-template-columns:1fr;background:#FAFBFD">' +
+        '<div class="login-form">' +
+          '<form class="login-card" id="fPw" style="max-width:440px">' +
+            '<div class="card-header-badge">' + icon('shield') + '<span>Pembaruan Keamanan</span></div>' +
+            '<div class="row" style="gap:12px;margin-bottom:12px">' +
+              '<div class="hero-brand-logo" style="width:42px;height:42px">' + icon('key') + '</div>' +
+              '<div><h2 style="font-size:20px;line-height:24px">Buat Password Baru</h2><span class="small muted">Wajib untuk login perdana</span></div>' +
+            '</div>' +
+            '<p class="sub">Halo, <b>' + esc(user.nama) + '</b>. Demi keamanan akun Anda, silakan ganti password awal sebelum melanjutkan ke sistem.</p>' +
+            '<div id="pwErr"></div>' +
+            pwFields() +
+            '<button class="login-submit-btn" id="bPw" type="submit" style="margin-top:16px">' +
+              '<span>Simpan Password & Masuk</span>' + icon('arrowRight') +
+            '</button>' +
+            '<button class="btn ghost block" type="button" id="bOut" style="margin-top:8px">Batal & Keluar</button>' +
+          '</form>' +
+        '</div>' +
+      '</div>';
+
     $('#bOut').onclick = logout;
     $('#fPw').onsubmit = async function (e) {
-      e.preventDefault(); const b = $('#bPw'); b.disabled = true;
+      e.preventDefault();
+      const b = $('#bPw');
+      b.disabled = true;
+      b.innerHTML = '<div class="spin sm" style="border-top-color:#fff;border-color:rgba(255,255,255,.4)"></div> Menyimpan…';
       try {
         const r = await submitPw($('#fPw'));
-        A.s = r.boot; reindex(); save(); enter();
-      } catch (err) { $('#pwErr').innerHTML = '<div class="err-box" role="alert">' + esc(err.message) + '</div>'; b.disabled = false; }
+        A.s = r.boot;
+        reindex();
+        save();
+        enter();
+      } catch (err) {
+        $('#pwErr').innerHTML = '<div class="err-box" role="alert">' + esc(err.message) + '</div>';
+        b.disabled = false;
+        b.innerHTML = '<span>Simpan Password & Masuk</span>' + icon('arrowRight');
+      }
     };
   }
+
+  A.togglePw = function (btn) {
+    const inp = btn.parentElement ? btn.parentElement.querySelector('input') : null;
+    if (inp) {
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+  };
+
   function pwFields() {
-    return '<div class="field"><label>Password lama (awal)</label><input class="input" name="old" type="password" autocomplete="current-password" required></div>' +
-      '<div class="field"><label>Password baru</label><input class="input" name="n1" type="password" autocomplete="new-password" minlength="8" required><span class="small muted">Minimal 8 karakter, kombinasi huruf dan angka.</span></div>' +
-      '<div class="field"><label>Ulangi password baru</label><input class="input" name="n2" type="password" autocomplete="new-password" required></div>';
+    return '<div class="field"><label>Password lama (awal)</label><div class="input-with-icon pw"><span class="input-icon">' + icon('key') + '</span><input class="input" name="old" type="password" autocomplete="current-password" placeholder="Password lama Anda" required><button type="button" class="eye" onclick="App.togglePw(this)" aria-label="Tampilkan password">' + icon('eye') + '</button></div></div>' +
+      '<div class="field"><label>Password baru</label><div class="input-with-icon pw"><span class="input-icon">' + icon('lock') + '</span><input class="input" name="n1" type="password" autocomplete="new-password" minlength="8" placeholder="Minimal 8 karakter" required><button type="button" class="eye" onclick="App.togglePw(this)" aria-label="Tampilkan password">' + icon('eye') + '</button></div><span class="small muted" style="margin-top:2px">Minimal 8 karakter, kombinasi huruf dan angka.</span></div>' +
+      '<div class="field"><label>Ulangi password baru</label><div class="input-with-icon pw"><span class="input-icon">' + icon('lock') + '</span><input class="input" name="n2" type="password" autocomplete="new-password" placeholder="Ulangi password baru" required><button type="button" class="eye" onclick="App.togglePw(this)" aria-label="Tampilkan password">' + icon('eye') + '</button></div></div>';
   }
   async function submitPw(form) {
     const f = form.elements, n1 = f.n1.value;
