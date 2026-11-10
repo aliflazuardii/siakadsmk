@@ -40,7 +40,13 @@ const App = (function () {
   A.namaSekolah = function () { return (A.s && A.s.settings && A.s.settings.nama_sekolah) || 'Sekolah'; };
 
   // ---------- jam pelajaran ----------
-  A.jp = function (n) {
+  A.jp = function (n, hari) {
+    const st = A.s.settings, tb = String((hari === 'Jumat' ? st.jp_tabel_jumat : st.jp_tabel_reguler) || '').split(',')[n - 1];
+    const mt = tb && /^(\d\d):(\d\d)-(\d\d):(\d\d)$/.exec(tb.trim());
+    if (mt) return { s: +mt[1] * 60 + +mt[2], e: +mt[3] * 60 + +mt[4] };
+    return A.jpHitung(n);
+  };
+  A.jpHitung = function (n) {
     const st = A.s.settings, mp = String(st.jp_mulai || '07:30').split(':'), dur = Number(st.jp_durasi) || 45;
     const brk = {}; String(st.jp_istirahat || '').split(',').forEach(function (x) { const p = x.split(':'); if (p.length === 2) brk[+p[0]] = +p[1]; });
     let t = (+mp[0]) * 60 + (+mp[1]), s = t, e = t;
@@ -57,7 +63,7 @@ const App = (function () {
       if (l && l.kelas_id === j.kelas_id && l.mapel_id === j.mapel_id && l.guru_id === j.guru_id && l.to === j.jam_ke - 1) { l.to = j.jam_ke; }
       else out.push({ kelas_id: j.kelas_id, mapel_id: j.mapel_id, guru_id: j.guru_id, ruang: j.ruang, from: j.jam_ke, to: j.jam_ke });
     });
-    out.forEach(function (b) { b.start = A.jp(b.from).s; b.end = A.jp(b.to).e; b.label = b.from === b.to ? String(b.from) : b.from + '-' + b.to; });
+    out.forEach(function (b) { b.start = A.jp(b.from, hari).s; b.end = A.jp(b.to, hari).e; b.label = b.from === b.to ? String(b.from) : b.from + '-' + b.to; });
     return out;
   };
 

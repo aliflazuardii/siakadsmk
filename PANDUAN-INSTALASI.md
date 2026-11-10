@@ -85,6 +85,9 @@ Tunggu ±1 menit lalu muat ulang dengan Ctrl+Shift+R.
 
 ---
 
+## Data Awal Sekolah (opsional)
+Tempel `DataAwal.gs` sebagai file baru di proyek Apps Script, lalu jalankan fungsi `isiDataAwal` sekali: mengisi guru, kelas beserta wali kelas, dan siswa. Aman dijalankan ulang. Jam pelajaran (Senin–Kamis dan Jumat) sudah terisi otomatis; ubah di menu Pengaturan.
+
 ## Langkah Pertama Setelah Online
 1. Buka situs, login `admin` + password awal → **wajib ganti password**.
 2. **Pengaturan**: isi nama sekolah, kepala sekolah, KKM, jam pelajaran.
