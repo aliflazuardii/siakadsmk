@@ -97,7 +97,7 @@ App.pages.dashboard = async function (view, q, live) {
   function head(extra) {
     const u = s.user, ta = s.ta;
     return '<div class="card pad row between wrap" style="margin-bottom:var(--gap)"><div><h1 style="font-size:24px;line-height:32px;font-weight:700">' + W.greeting() + ', ' + esc(u.nama) + ' 👋</h1><p class="muted" style="margin-top:4px">' + extra + '</p></div>' +
-      '<div class="row wrap"><span class="badge pri">' + icon('cal') + (ta ? esc(ta.semester + ' ' + ta.tahun) : 'Tahun ajaran belum diatur') + '</span><span class="badge ok">Tersambung ke Google Sheets</span></div></div>';
+      '<div class="row wrap"><span class="badge pri">' + icon('cal') + (ta ? esc(ta.semester + ' ' + ta.tahun) : 'Tahun ajaran belum diatur') + '</span><span class="badge ok">Tersambung ke database</span></div></div>';
   }
 
   function guruView(d) {
@@ -245,9 +245,8 @@ App.pages.nilai = async function (view, q, live) {
       const v = r[k], low = v !== '' && v !== undefined && v < st.bobot.kkm, d = dirty[sw.siswa_id + '|' + k] !== undefined;
       return '<td class="num ' + (k === 'praktik' ? 'col-hi' : '') + '"><input class="nilai-in ' + (low ? 'low ' : '') + (d ? 'dirty' : '') + '" inputmode="decimal" autocomplete="off" data-s="' + sw.siswa_id + '" data-k="' + k + '" value="' + (v === '' || v === undefined ? '' : v) + '" ' + (ed ? '' : 'disabled') + ' aria-label="' + LAB[k] + ' ' + esc(sw.nama) + '"></td>';
     }).join('');
-    return '<tr data-r="' + sw.siswa_id + '" class="' + (stt === 'remedial' ? 'row-bad' : '') + '">' +
-      '<td class="num muted">' + (i + 1) + '</td>' +
-      '<td class="stick-1"><div class="nama-col"><b>' + esc(sw.nama) + '</b>' + (stt === 'remedial' ? '<div><span class="st-bad">Perlu remedial</span></div>' : '') + '</div></td>' + cells +
+    return '<tr data-r="' + sw.siswa_id + '" class="' + (stt === 'remedial' ? 'row-bad' : '') + '"><td class="num muted">' + (i + 1) + '</td><td><span class="small muted mono">' + esc(sw.nis) + '</span><br><span class="small muted mono">' + esc(sw.nisn || '') + '</span></td>' +
+      '<td class="stick-1"><div class="person"><span class="avatar sm tint">' + esc(U.initials(sw.nama)) + '</span><div><b>' + esc(sw.nama) + '</b>' + (stt === 'remedial' ? '<span class="st-bad">Perlu remedial</span>' : '') + '</div></div></td>' + cells +
       '<td class="num"><span class="na ' + (stt === 'remedial' ? 'low' : c.lengkap ? '' : 'prov') + '" data-na>' + (c.na === null ? '-' : U.num(c.na, 1)) + '</span></td><td data-st>' + BADGE[stt] + '</td></tr>';
   }
 
@@ -256,8 +255,8 @@ App.pages.nilai = async function (view, q, live) {
     const list = st.siswa.filter(function (x) { return (filter === 'all' || statusOf(x.siswa_id) === filter) && (!qv || (x.nama + ' ' + x.nis).toLowerCase().indexOf(qv) >= 0); });
     const head = KOMP.map(function (k) { return '<th class="num ' + (k === 'praktik' ? 'col-hi' : '') + '">' + LAB[k] + '<br><span style="font-weight:500">(' + st.bobot[k] + '%)</span></th>'; }).join('');
     $('#matrix').innerHTML = '<div class="card"><div class="card-h"><div><h3>Lembar matriks nilai siswa</h3><p>' + (st.can_edit ? 'Klik kotak angka untuk mengubah. Nilai akhir diperbarui otomatis dan tersimpan sendiri.' : 'Mode lihat saja — Anda tidak mengampu mata pelajaran ini.') + '</p></div><div class="legend"><span><i style="background:var(--ok)"></i>Tuntas (≥ ' + st.bobot.kkm + ')</span><span><i style="background:var(--bad)"></i>Perlu remedial</span></div></div>' +
-      '<div class="card-b" style="padding-left:0;padding-right:0"><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="num">No</th><th class="stick-1">Nama siswa</th>' + head + '<th class="num">Nilai akhir</th><th>Status</th></tr></thead><tbody>' +
-      (list.length ? list.map(function (x) { return rowHtml(x, st.siswa.indexOf(x)); }).join('') : '<tr><td colspan="10">' + U.empty('users', st.siswa.length ? 'Tidak ada siswa yang cocok' : 'Belum ada siswa di kelas ini', st.siswa.length ? '' : 'Tambahkan siswa di Data Master.') + '</td></tr>') + '</tbody></table></div></div>' +
+      '<div class="card-b" style="padding-left:0;padding-right:0"><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="num">No</th><th>NIS / NISN</th><th class="stick-1">Nama siswa</th>' + head + '<th class="num">Nilai akhir</th><th>Status</th></tr></thead><tbody>' +
+      (list.length ? list.map(function (x) { return rowHtml(x, st.siswa.indexOf(x)); }).join('') : '<tr><td colspan="11">' + U.empty('users', st.siswa.length ? 'Tidak ada siswa yang cocok' : 'Belum ada siswa di kelas ini', st.siswa.length ? '' : 'Tambahkan siswa di Data Master.') + '</td></tr>') + '</tbody></table></div></div>' +
       '<div class="pager no-print" style="border-top:1px solid var(--line)"><span class="small muted row" style="gap:6px">' + icon('alert') + 'Tab / panah ↑↓ / Enter untuk berpindah kolom dan baris.</span><span class="small muted" id="saveLbl"></span></div></div>';
     saveLabel();
   }
@@ -412,16 +411,13 @@ App.pages.absensi = async function (view, q, live) {
     const pages = Math.max(1, Math.ceil(list.length / PAGE)); if (page > pages) page = pages;
     const rows = list.slice((page - 1) * PAGE, page * PAGE), ed = data.can_edit;
     $('#aTable').innerHTML = '<div class="card-h"><div><h3>Daftar presensi siswa <span class="badge pri" style="margin-left:6px">' + data.siswa.length + ' peserta</span></h3></div><span class="small muted row" style="gap:5px">' + icon('star') + 'Klik huruf status untuk mengubah</span></div>' +
-      '<div class="card-b" style="padding-left:0;padding-right:0"><div class="tbl-wrap"><table class="tbl tbl-absensi"><thead><tr><th class="num" style="width:36px">No</th><th>Nama siswa</th><th style="width:138px;text-align:center">Presensi</th><th>Keterangan</th></tr></thead><tbody>' +
+      '<div class="card-b" style="padding-left:0;padding-right:0"><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="num">No</th><th>NIS</th><th>Nama siswa</th><th>JK</th><th>Status presensi</th><th>Keterangan</th></tr></thead><tbody>' +
       (rows.length ? rows.map(function (x) {
-        const st = state[x.siswa_id], i = data.siswa.indexOf(x) + 1;
-        const stBadge = st.status === 'S' ? '<span class="st-warn" style="font-size:11px;font-weight:600">Sakit</span>' : st.status === 'I' ? '<span class="st-warn" style="font-size:11px;font-weight:600">Izin</span>' : st.status === 'A' ? '<span class="st-bad" style="font-size:11px;font-weight:600">Alfa</span>' : '';
-        return '<tr data-r="' + x.siswa_id + '" class="' + (st.status === 'A' ? 'row-bad' : st.status !== 'H' ? 'row-warn' : '') + '">' +
-          '<td class="num muted">' + i + '</td>' +
-          '<td><div class="nama-col"><b>' + esc(x.nama) + '</b>' + (stBadge ? '<div>' + stBadge + '</div>' : '') + '</div></td>' +
-          '<td style="text-align:center"><div class="hsia ' + (ed ? '' : 'ro') + '" role="group" aria-label="Status ' + esc(x.nama) + '">' + ['H', 'S', 'I', 'A'].map(function (k) { return '<button data-s="' + k + '" class="' + (st.status === k ? 'on' : '') + '" aria-pressed="' + (st.status === k) + '">' + k + '</button>'; }).join('') + '</div></td>' +
-          '<td>' + (st.status === 'H' ? '<span class="muted small">-</span>' : '<input class="ket" maxlength="120" placeholder="Keterangan…" value="' + esc(st.keterangan) + '" ' + (ed ? '' : 'disabled') + ' aria-label="Keterangan ' + esc(x.nama) + '">') + '</td></tr>';
-      }).join('') : '<tr><td colspan="4">' + U.empty('users', data.siswa.length ? 'Tidak ada siswa yang cocok' : 'Belum ada siswa di kelas ini', data.siswa.length ? '' : 'Tambahkan siswa di Data Master.') + '</td></tr>') + '</tbody></table></div></div>' + U.pager(list.length, page, PAGE);
+        const st = state[x.siswa_id], i = data.siswa.indexOf(x) + 1, sub = st.status === 'S' ? '<span class="st-warn">Sakit</span>' : st.status === 'I' ? '<span class="st-warn">Izin</span>' : st.status === 'A' ? '<span class="st-bad">Alfa</span>' : '<span>Presensi smt: ' + (x.pct === null ? '-' : U.num(x.pct, 0) + '%') + '</span>';
+        return '<tr data-r="' + x.siswa_id + '" class="' + (st.status === 'A' ? 'row-bad' : st.status !== 'H' ? 'row-warn' : '') + '"><td class="num muted">' + i + '</td><td class="mono muted">' + esc(x.nis) + '</td><td><div class="person"><span class="avatar sm tint">' + esc(U.initials(x.nama)) + '</span><div><b>' + esc(x.nama) + '</b>' + sub + '</div></div></td><td><span class="badge gray">' + esc(x.jenis_kelamin) + '</span></td>' +
+          '<td><div class="hsia ' + (ed ? '' : 'ro') + '" role="group" aria-label="Status ' + esc(x.nama) + '">' + ['H', 'S', 'I', 'A'].map(function (k) { return '<button data-s="' + k + '" class="' + (st.status === k ? 'on' : '') + '" aria-pressed="' + (st.status === k) + '">' + k + '</button>'; }).join('') + '</div></td>' +
+          '<td>' + (st.status === 'H' ? '<span class="muted small">Hadir normal</span>' : '<input class="ket" maxlength="120" placeholder="Keterangan…" value="' + esc(st.keterangan) + '" ' + (ed ? '' : 'disabled') + ' aria-label="Keterangan ' + esc(x.nama) + '">') + '</td></tr>';
+      }).join('') : '<tr><td colspan="6">' + U.empty('users', data.siswa.length ? 'Tidak ada siswa yang cocok' : 'Belum ada siswa di kelas ini', data.siswa.length ? '' : 'Tambahkan siswa di Data Master.') + '</td></tr>') + '</tbody></table></div></div>' + U.pager(list.length, page, PAGE);
     $('#aSave').disabled = !ed; $('#aAll').disabled = !ed;
   }
 

@@ -9,8 +9,8 @@ App.pages.jurnal = async function (view, q, live) {
   const { esc, icon, $ } = U;
   const s = App.s, role = s.user.role, METODE = ['Ceramah', 'Diskusi', 'Tanya Jawab', 'Demonstrasi', 'Praktikum', 'Project Based Learning', 'Problem Based Learning', 'Lainnya'];
   let bulan = /^\d{4}-\d{2}$/.test(q.bulan || '') ? q.bulan : U.todayStr().slice(0, 7), fstatus = q.status || '', fkelas = '', rows = [], page = 1;
-  const PAGE = 15, isGuru = role === 'guru';
-  const ptn = s.opts.penugasan;
+  const PAGE = 15, isGuru = role === 'guru' || (App.isLeader() && role !== 'admin' && !!s.user.ref_id);
+  const ptn = s.opts.penugasan.filter(function (p) { return role === 'guru' || p.guru_id === s.user.ref_id; });
 
   view.innerHTML = App.head(App.crumb('Jurnal mengajar'), 'Jurnal mengajar', 'Catatan kegiatan belajar mengajar per sesi.',
     '<button class="btn secondary" id="jCsv">' + icon('dl') + 'Unduh Excel (CSV)</button><button class="btn secondary" id="jPrint">' + icon('print') + 'Cetak PDF</button>' + (isGuru ? '<button class="btn primary" id="jAdd">' + icon('plus') + 'Tambah jurnal</button>' : '')) +
@@ -98,7 +98,7 @@ App.pages.jadwal = async function (view, q, live) {
     $('#sBody').innerHTML = src.length ? '<div class="grid g3" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">' + days.map(function (d) {
       const bl = App.blocks(src, d);
       return '<div class="card"><div class="card-h"><h3>' + d + '</h3>' + (d === today ? '<span class="badge pri">Hari ini</span>' : '') + '</div><div class="card-b">' + (bl.length ? '<div class="sched">' + bl.map(function (b) {
-        return '<div class="sch" style="padding:10px"><div class="jp">JP ' + b.label + '</div><div class="grow"><b>' + esc(App.mapel(b.mapel_id)) + '</b><div class="meta"><span>' + App.hm(b.start) + '–' + App.hm(b.end) + '</span><span>' + esc(mode === 'kelas' ? App.guru(b.guru_id) : App.kelas(b.kelas_id)) + '</span>' + (b.ruang ? '<span>' + esc(b.ruang) + '</span>' : '') + '</div></div></div>'; }).join('') + '</div>' : '<div class="small muted">Tidak ada jadwal.</div>') + '</div></div>';
+        return '<div class="sch" style="padding:10px"><div class="jp">JP ' + b.label + '</div><div class="grow"><b>' + esc(App.mapel(b.mapel_id)) + '</b><div class="meta"><span>' + App.hm(b.start) + '–' + App.hm(b.end) + '</span><span>' + esc(mode === 'kelas' || role === 'siswa' ? App.guru(b.guru_id) : App.kelas(b.kelas_id)) + '</span>' + (b.ruang ? '<span>' + esc(b.ruang) + '</span>' : '') + '</div></div></div>'; }).join('') + '</div>' : '<div class="small muted">Tidak ada jadwal.</div>') + '</div></div>';
     }).join('') + '</div>' : '<div class="card pad">' + U.empty('clock', 'Jadwal belum tersedia', canEdit ? 'Tambahkan jadwal di Data Master → Jadwal.' : 'Jadwal belum diatur oleh Waka Kurikulum.') + '</div>';
   }
   if (mode !== 'own') {
@@ -340,7 +340,7 @@ App.pages.users = async function (view, q, live) {
     $('[data-ok]', m.el).onclick = m.close;
   }
   async function generate(tipe) {
-    if (!(await U.confirm('Buat akun massal ' + tipe + '?', 'Sistem membuat akun untuk semua ' + tipe + ' aktif yang belum punya akun. Username memakai ' + (tipe === 'guru' ? 'NIP' : 'NIS') + '. Proses berjalan bertahap.', 'Buat akun'))) return;
+    if (!(await U.confirm('Buat akun massal ' + tipe + '?', 'Sistem membuat akun untuk semua ' + tipe + ' aktif yang belum punya akun. Username memakai nama awal (jika kembar: nama awal.nama kedua). Proses berjalan bertahap.', 'Buat akun'))) return;
     const t = U.toast('Membuat akun…', 'busy'), all = [];
     try { for (let n = 0; n < 40; n++) { const r = await API.call('users.generate', { tipe: tipe, limit: 40 }); all.push.apply(all, r.created); t.querySelector('span').textContent = 'Membuat akun… ' + all.length + ' selesai'; if (!r.remaining || !r.created.length) break; } }
     catch (e) { U.toast(e.message, 'err'); }
