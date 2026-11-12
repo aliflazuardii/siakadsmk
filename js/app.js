@@ -71,15 +71,16 @@ const App = (function () {
   const NAV = {
     dashboard: ['Dashboard', 'dash'], nilai: ['Input Nilai', 'edit'], absensi: ['Absensi Siswa', 'usercheck'], jurnal: ['Jurnal Mengajar', 'book'],
     jadwal: ['Jadwal Pelajaran', 'clock'], kalender: ['Kalender Akademik', 'cal'], master: ['Data Master', 'box'], monitoring: ['Monitoring', 'chart'],
-    users: ['Pengguna', 'users'], pengaturan: ['Pengaturan', 'sliders']
+    users: ['Pengguna', 'users'], pengaturan: ['Pengaturan', 'sliders'],
+    administrasi: ['Administrasi', 'file'], materi: ['Materi Pelajaran', 'book']
   };
   function navFor(role) {
     const base = {
-      admin: ['dashboard', 'absensi', 'nilai', 'jurnal', 'jadwal', 'kalender', 'master', 'monitoring', 'users', 'pengaturan'],
-      kepsek: ['dashboard', 'monitoring', 'nilai', 'absensi', 'jurnal', 'jadwal', 'kalender', 'master'],
-      kurikulum: ['dashboard', 'monitoring', 'jadwal', 'nilai', 'absensi', 'jurnal', 'kalender', 'master'],
-      guru: ['dashboard', 'nilai', 'absensi', 'jurnal', 'jadwal', 'kalender', 'master'],
-      siswa: ['dashboard', 'nilai', 'absensi', 'jadwal', 'kalender']
+      admin: ['dashboard', 'absensi', 'nilai', 'jurnal', 'administrasi', 'jadwal', 'kalender', 'master', 'monitoring', 'users', 'pengaturan'],
+      kepsek: ['dashboard', 'monitoring', 'administrasi', 'nilai', 'absensi', 'jurnal', 'jadwal', 'kalender', 'master'],
+      kurikulum: ['dashboard', 'monitoring', 'jadwal', 'administrasi', 'nilai', 'absensi', 'jurnal', 'kalender', 'master'],
+      guru: ['dashboard', 'nilai', 'absensi', 'jurnal', 'administrasi', 'jadwal', 'kalender', 'master'],
+      siswa: ['dashboard', 'nilai', 'absensi', 'materi', 'jadwal', 'kalender']
     }[role] || ['dashboard'];
     return base.map(function (k) {
       let label = NAV[k][0];
@@ -93,62 +94,191 @@ const App = (function () {
   }
   A.isLeaderRole = function (r) { return LEADERS.indexOf(r) >= 0; };
 
-  // ---------- tampilan: login ----------
+  // ---------- tampilan: login & bantuan ----------
+  function openLoginHelp() {
+    U.modal({
+      title: 'Bantuan Akun & Kata Sandi',
+      size: '',
+      body:
+        '<div style="display:grid;gap:14px;font-size:13px;line-height:20px">' +
+          '<div><b style="color:var(--text)">Akun Siswa:</b><p class="muted" style="margin-top:2px">Masuk dengan <b>NIS</b> atau <b>NISN</b>. Jika lupa password atau belum menerima akun, hubungi <b>Wali Kelas</b> Anda.</p></div>' +
+          '<div><b style="color:var(--text)">Guru & Tenaga Kependidikan:</b><p class="muted" style="margin-top:2px">Masuk dengan <b>NIP</b> atau username yang didaftarkan. Hubungi <b>Waka Kurikulum</b> bila terkendala.</p></div>' +
+          '<div><b style="color:var(--text)">Administrator:</b><p class="muted" style="margin-top:2px">Bila password admin lupa, buka editor Apps Script dan jalankan fungsi <code>resetAdminPassword</code>.</p></div>' +
+        '</div>',
+      foot: '<button class="btn secondary block" data-x>Tutup</button>'
+    });
+  }
+
   function viewLogin(msg) {
-    const name = window.SIAKAD_CONFIG.APP_NAME;
+    const name = window.SIAKAD_CONFIG.APP_NAME || 'SIAKAD SMK';
+    const rememberedUser = (function () { try { return localStorage.getItem('siakad.remember_user') || ''; } catch (e) { return ''; } })();
+
     $('#app').innerHTML =
-      '<div class="login-wrap"><div class="login-hero"><div class="row" style="gap:12px;position:relative;z-index:1"><div class="logo-mark">' + icon('cap') + '</div><b style="font-size:18px">' + esc(name) + '</b></div>' +
-      '<div style="position:relative;z-index:1"><h1>Administrasi akademik, lebih ringkas.</h1><ul>' +
-      '<li>' + icon('edit') + '<span>Input nilai langsung di tabel — nilai akhir terhitung otomatis.</span></li>' +
-      '<li>' + icon('usercheck') + '<span>Presensi satu kelas dalam hitungan detik.</span></li>' +
-      '<li>' + icon('book') + '<span>Jurnal mengajar dan kalender akademik dalam satu tempat.</span></li></ul></div>' +
-      '<span class="small" style="color:#9A3412;position:relative;z-index:1">Data tersimpan aman di database sekolah.</span></div>' +
-      '<div class="login-form"><form class="login-card" id="fLogin" autocomplete="on" novalidate><h2>Masuk</h2><p class="sub">Gunakan akun yang diberikan oleh admin sekolah.</p>' +
-      (msg ? '<div class="err-box" role="alert">' + esc(msg) + '</div>' : '') +
-      '<div id="loginErr"></div>' +
-      '<div class="field"><label for="lu">Username</label><input class="input" id="lu" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>' +
-      '<div class="field"><label for="lp">Password</label><div class="pw"><input class="input" id="lp" name="password" type="password" autocomplete="current-password" required>' +
-      '<button type="button" class="eye" id="eye" aria-label="Tampilkan password">' + icon('eye') + '</button></div></div>' +
-      '<button class="btn primary block" id="bLogin" type="submit">Masuk</button>' +
-      '<p class="small muted center" style="margin-top:16px">Lupa password? Hubungi admin sekolah untuk mengatur ulang.</p></form></div></div>';
-    $('#eye').onclick = function () { const p = $('#lp'); p.type = p.type === 'password' ? 'text' : 'password'; };
+      '<div class="login-wrap">' +
+        '<!-- Kolom Kiri: Tampilan Awal -->' +
+        '<div class="login-hero">' +
+          '<div class="login-hero-brand">' +
+            '<div class="logo-mark">' + icon('cap') + '</div>' +
+            '<div><b>' + esc(name) + '</b><span style="display:block">Sistem Informasi Akademik</span></div>' +
+          '</div>' +
+          '<div class="login-hero-body">' +
+            '<span class="login-hero-tag">Portal Akademik Terpadu</span>' +
+            '<h1>Administrasi sekolah, lebih ringkas dan teratur.</h1>' +
+            '<p>Satu sistem terintegrasi untuk mengelola nilai rapor Kurikulum Merdeka, presensi siswa per jam pelajaran, dan jurnal mengajar guru.</p>' +
+            '<ul class="login-hero-points">' +
+              '<li><div class="point-ic">' + icon('check') + '</div><div><b>Penilaian & E-Rapor</b><span>Input nilai formatif dan sumatif dengan rekap otomatis siap cetak.</span></div></li>' +
+              '<li><div class="point-ic">' + icon('check') + '</div><div><b>Presensi Real-time</b><span>Pencatatan kehadiran siswa per kelas dan per jam pelajaran.</span></div></li>' +
+              '<li><div class="point-ic">' + icon('check') + '</div><div><b>Jadwal & Jurnal Mengajar</b><span>Agenda pembelajaran harian terintegrasi kalender akademik sekolah.</span></div></li>' +
+            '</ul>' +
+          '</div>' +
+          '<div class="login-hero-foot">' +
+            '<span class="status-dot-sm"></span><span>Data tersimpan aman di database sekolah</span>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Kolom Kanan: Login Card -->' +
+        '<div class="login-form">' +
+          '<div class="login-card">' +
+            '<div class="mobile-brand">' +
+              '<div class="logo-mark">' + icon('cap') + '</div>' +
+              '<h2>' + esc(name) + '</h2>' +
+              '<p>Sistem Informasi Akademik SMK</p>' +
+            '</div>' +
+            '<form id="fLogin" autocomplete="on" novalidate>' +
+              '<h2>Masuk</h2>' +
+              '<p class="sub">Gunakan akun yang diberikan oleh pihak sekolah.</p>' +
+              (msg ? '<div class="err-box" role="alert">' + esc(msg) + '</div>' : '') +
+              '<div id="loginErr"></div>' +
+              '<div class="field">' +
+                '<label for="lu">Username / NISN / NIP</label>' +
+                '<input class="input" id="lu" name="username" value="' + esc(rememberedUser) + '" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Masukkan ID atau username" required>' +
+              '</div>' +
+              '<div class="field">' +
+                '<label for="lp">Password</label>' +
+                '<div class="pw">' +
+                  '<input class="input" id="lp" name="password" type="password" autocomplete="current-password" placeholder="Masukkan password" required>' +
+                  '<button type="button" class="eye" id="eye" aria-label="Tampilkan password">' + icon('eye') + '</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="login-opts">' +
+                '<label class="remember-me"><input type="checkbox" id="remUser"' + (rememberedUser ? ' checked' : '') + '><span>Ingat saya</span></label>' +
+                '<button type="button" class="forgot-btn" id="bForgot">Lupa password?</button>' +
+              '</div>' +
+              '<button class="btn primary block" id="bLogin" type="submit">Masuk</button>' +
+              '<div class="login-foot-note">' +
+                'Butuh bantuan akun? <button type="button" id="bHelp">Lihat panduan</button>' +
+              '</div>' +
+            '</form>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    $('#eye').onclick = function () {
+      const p = $('#lp');
+      p.type = p.type === 'password' ? 'text' : 'password';
+    };
+
+    $('#bForgot').onclick = openLoginHelp;
+    $('#bHelp').onclick = openLoginHelp;
+
     $('#fLogin').onsubmit = async function (e) {
       e.preventDefault();
       const u = $('#lu').value.trim(), p = $('#lp').value, b = $('#bLogin'), box = $('#loginErr');
       box.innerHTML = '';
-      if (!u || !p) { box.innerHTML = '<div class="err-box" role="alert">Username dan password wajib diisi.</div>'; return; }
-      b.disabled = true; b.innerHTML = '<div class="spin sm" style="border-top-color:#fff;border-color:rgba(255,255,255,.4)"></div> Memeriksa…';
+      if (!u || !p) {
+        box.innerHTML = '<div class="err-box" role="alert">Username dan password wajib diisi.</div>';
+        return;
+      }
+
+      const rem = $('#remUser');
+      try {
+        if (rem && rem.checked) localStorage.setItem('siakad.remember_user', u);
+        else localStorage.removeItem('siakad.remember_user');
+      } catch (err) {}
+
+      b.disabled = true;
+      b.innerHTML = '<div class="spin sm" style="border-top-color:#fff;border-color:rgba(255,255,255,.4)"></div> Memeriksa…';
       try {
         const r = await API.call('login', { username: u, password: p });
         API.setToken(r.token);
-        if (r.must_change) { A.s = { user: r.user }; viewForceChange(r.user); return; }
-        A.s = r.boot; reindex(); save(); enter();
+        if (r.must_change) {
+          A.s = { user: r.user };
+          viewForceChange(r.user);
+          return;
+        }
+        A.s = r.boot;
+        reindex();
+        save();
+        enter();
       } catch (err) {
         box.innerHTML = '<div class="err-box" role="alert">' + esc(err.message) + '</div>';
-        b.disabled = false; b.textContent = 'Masuk'; $('#lp').select();
+        b.disabled = false;
+        b.textContent = 'Masuk';
+        $('#lp').select();
       }
     };
-    hideSplash(); setTimeout(function () { const f = $('#lu'); if (f) f.focus(); }, 50);
+
+    hideSplash();
+    setTimeout(function () {
+      const f = $('#lu');
+      if (f) {
+        if (f.value) {
+          const p = $('#lp');
+          if (p) p.focus();
+        } else {
+          f.focus();
+        }
+      }
+    }, 50);
   }
 
   function viewForceChange(user) {
     $('#app').innerHTML =
-      '<div class="login-wrap" style="grid-template-columns:1fr"><div class="login-form"><form class="login-card" id="fPw"><div class="logo-mark" style="margin-bottom:16px">' + icon('key') + '</div>' +
-      '<h2>Buat password baru</h2><p class="sub">Halo, ' + esc(user.nama) + '. Demi keamanan, ganti password awal Anda sebelum melanjutkan.</p><div id="pwErr"></div>' + pwFields(false) +
-      '<button class="btn primary block" id="bPw" type="submit">Simpan & lanjutkan</button><button class="btn ghost block" type="button" id="bOut" style="margin-top:8px">Keluar</button></form></div></div>';
+      '<div class="login-wrap" style="grid-template-columns:1fr">' +
+        '<div class="login-form">' +
+          '<form class="login-card" id="fPw">' +
+            '<div class="logo-mark" style="margin-bottom:16px">' + icon('key') + '</div>' +
+            '<h2>Buat password baru</h2>' +
+            '<p class="sub">Halo, ' + esc(user.nama) + '. Demi keamanan, ganti password awal Anda sebelum melanjutkan.</p>' +
+            '<div id="pwErr"></div>' +
+            pwFields() +
+            '<button class="btn primary block" id="bPw" type="submit" style="margin-top:14px">Simpan & lanjutkan</button>' +
+            '<button class="btn ghost block" type="button" id="bOut" style="margin-top:6px">Keluar</button>' +
+          '</form>' +
+        '</div>' +
+      '</div>';
+
     $('#bOut').onclick = logout;
     $('#fPw').onsubmit = async function (e) {
-      e.preventDefault(); const b = $('#bPw'); b.disabled = true;
+      e.preventDefault();
+      const b = $('#bPw');
+      b.disabled = true;
+      b.innerHTML = '<div class="spin sm" style="border-top-color:#fff;border-color:rgba(255,255,255,.4)"></div> Menyimpan…';
       try {
         const r = await submitPw($('#fPw'));
-        A.s = r.boot; reindex(); save(); enter();
-      } catch (err) { $('#pwErr').innerHTML = '<div class="err-box" role="alert">' + esc(err.message) + '</div>'; b.disabled = false; }
+        A.s = r.boot;
+        reindex();
+        save();
+        enter();
+      } catch (err) {
+        $('#pwErr').innerHTML = '<div class="err-box" role="alert">' + esc(err.message) + '</div>';
+        b.disabled = false;
+        b.textContent = 'Simpan & lanjutkan';
+      }
     };
   }
+
+  A.togglePw = function (btn) {
+    const inp = btn.parentElement ? btn.parentElement.querySelector('input') : null;
+    if (inp) {
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+  };
+
   function pwFields() {
-    return '<div class="field"><label>Password lama (awal)</label><input class="input" name="old" type="password" autocomplete="current-password" required></div>' +
-      '<div class="field"><label>Password baru</label><input class="input" name="n1" type="password" autocomplete="new-password" minlength="8" required><span class="small muted">Minimal 8 karakter, kombinasi huruf dan angka.</span></div>' +
-      '<div class="field"><label>Ulangi password baru</label><input class="input" name="n2" type="password" autocomplete="new-password" required></div>';
+    return '<div class="field"><label>Password lama (awal)</label><div class="pw"><input class="input" name="old" type="password" autocomplete="current-password" required><button type="button" class="eye" onclick="App.togglePw(this)" aria-label="Tampilkan password">' + icon('eye') + '</button></div></div>' +
+      '<div class="field"><label>Password baru</label><div class="pw"><input class="input" name="n1" type="password" autocomplete="new-password" minlength="8" required><button type="button" class="eye" onclick="App.togglePw(this)" aria-label="Tampilkan password">' + icon('eye') + '</button></div><span class="small muted">Minimal 8 karakter, kombinasi huruf dan angka.</span></div>' +
+      '<div class="field"><label>Ulangi password baru</label><div class="pw"><input class="input" name="n2" type="password" autocomplete="new-password" required><button type="button" class="eye" onclick="App.togglePw(this)" aria-label="Tampilkan password">' + icon('eye') + '</button></div></div>';
   }
   async function submitPw(form) {
     const f = form.elements, n1 = f.n1.value;
@@ -183,7 +313,7 @@ const App = (function () {
   function shell() {
     const u = A.s.user, st = A.s.settings, ta = A.s.ta;
     const nav = A.nav.map(function (n) { return '<a href="#/' + n.key + '" data-nav="' + n.key + '">' + icon(n.ic) + '<span>' + esc(n.label) + '</span></a>'; }).join('');
-    const SHORT = { dashboard: 'Beranda', nilai: 'Nilai', absensi: 'Absensi', jurnal: 'Jurnal', jadwal: 'Jadwal', kalender: 'Kalender', master: 'Data', monitoring: 'Monitor', users: 'Akun', pengaturan: 'Atur' };
+    const SHORT = { dashboard: 'Beranda', nilai: 'Nilai', absensi: 'Absensi', jurnal: 'Jurnal', jadwal: 'Jadwal', kalender: 'Kalender', master: 'Data', monitoring: 'Monitor', administrasi: 'Admin', materi: 'Materi', users: 'Akun', pengaturan: 'Atur' };
     const bottom = A.nav.slice(0, 4).map(function (n) { return '<a href="#/' + n.key + '" data-nav="' + n.key + '">' + icon(n.ic) + '<span>' + esc(SHORT[n.key] || n.label.split(' ')[0]) + '</span></a>'; }).join('') +
       '<button id="bMenu">' + icon('menu') + '<span>Menu</span></button>';
     $('#app').innerHTML =

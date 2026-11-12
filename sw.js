@@ -1,7 +1,7 @@
 /* Service worker: cache aset statis agar aplikasi terbuka hampir instan.
    NAIK-kan angka VERSI setiap kali Anda mengunggah perubahan file frontend. */
-const VERSI = 'siakad-v3';
-const INTI = ['./', 'index.html', 'css/style.css', 'js/config.js', 'js/api.js', 'js/ui.js', 'js/app.js', 'js/pages-a.js', 'js/pages-b.js'];
+const VERSI = 'siakad-v4';
+const INTI = ['./', 'index.html', 'css/style.css', 'js/config.js', 'js/api.js', 'js/ui.js', 'js/app.js', 'js/pages-a.js', 'js/pages-b.js', 'js/pages-c.js'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSI).then(function (c) { return c.addAll(INTI.map(function (u) { return new Request(u, { cache: 'reload' }); })); }).then(function () { return self.skipWaiting(); }));
