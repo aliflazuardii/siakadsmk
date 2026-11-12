@@ -101,9 +101,8 @@ const App = (function () {
       size: '',
       body:
         '<div style="display:grid;gap:14px;font-size:13px;line-height:20px">' +
-          '<div><b style="color:var(--text)">Akun Siswa:</b><p class="muted" style="margin-top:2px">Masuk dengan <b>NIS</b> atau <b>NISN</b>. Jika lupa password atau belum menerima akun, hubungi <b>Wali Kelas</b> Anda.</p></div>' +
+          '<div><b style="color:var(--text)">Akun Siswa:</b><p class="muted" style="margin-top:2px">Masuk dengan <b>NIS</b>. Jika lupa password atau belum menerima akun, hubungi <b>Wali Kelas</b> Anda.</p></div>' +
           '<div><b style="color:var(--text)">Guru & Tenaga Kependidikan:</b><p class="muted" style="margin-top:2px">Masuk dengan <b>NIP</b> atau username yang didaftarkan. Hubungi <b>Waka Kurikulum</b> bila terkendala.</p></div>' +
-          '<div><b style="color:var(--text)">Administrator:</b><p class="muted" style="margin-top:2px">Bila password admin lupa, buka editor Apps Script dan jalankan fungsi <code>resetAdminPassword</code>.</p></div>' +
         '</div>',
       foot: '<button class="btn secondary block" data-x>Tutup</button>'
     });
@@ -150,8 +149,8 @@ const App = (function () {
               (msg ? '<div class="err-box" role="alert">' + esc(msg) + '</div>' : '') +
               '<div id="loginErr"></div>' +
               '<div class="field">' +
-                '<label for="lu">Username / NISN / NIP</label>' +
-                '<input class="input" id="lu" name="username" value="' + esc(rememberedUser) + '" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Masukkan ID atau username" required>' +
+                '<label for="lu">Username / NIS / NIP</label>' +
+                '<input class="input" id="lu" name="username" value="' + esc(rememberedUser) + '" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Masukkan NIS, NIP, atau username" required>' +
               '</div>' +
               '<div class="field">' +
                 '<label for="lp">Password</label>' +
